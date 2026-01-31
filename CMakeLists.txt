@@ -37,9 +37,7 @@ set(
   "Coal, The Collision Detection Library. Previously known as HPP-FCL, fork of FCL -- The Flexible Collision Library"
 )
 set(PROJECT_URL "https://github.com/coal-library/coal")
-if(NOT BUILD_STANDALONE_PYTHON_INTERFACE)
-  set(PROJECT_USE_CMAKE_EXPORT TRUE)
-endif()
+set(PROJECT_USE_CMAKE_EXPORT TRUE)
 set(PROJECT_COMPATIBILITY_VERSION AnyNewerVersion)
 # To enable jrl-cmakemodules compatibility with workspace we must define the two
 # following lines
@@ -119,7 +117,6 @@ COMPUTE_PROJECT_ARGS(PROJECT_ARGS LANGUAGES CXX)
 project(${PROJECT_NAME} ${PROJECT_ARGS})
 
 include("${JRL_CMAKE_MODULES}/boost.cmake")
-include("${JRL_CMAKE_MODULES}/python.cmake")
 include("${JRL_CMAKE_MODULES}/apple.cmake")
 include("${JRL_CMAKE_MODULES}/ide.cmake")
 include("${JRL_CMAKE_MODULES}/tracy.cmake")
@@ -149,24 +146,6 @@ SET_DEFAULT_CMAKE_BUILD_TYPE("RelWithDebInfo")
 
 # If needed, fix CMake policy for APPLE systems
 APPLY_DEFAULT_APPLE_CONFIGURATION()
-
-cmake_dependent_option(
-  COAL_PYTHON_NANOBIND
-  "Build the nanobind-based bindings."
-  OFF
-  BUILD_PYTHON_INTERFACE
-  OFF
-)
-# Stubs only optional for legacy Boost.Python bindings
-if(NOT COAL_PYTHON_NANOBIND)
-  cmake_dependent_option(
-    GENERATE_PYTHON_STUBS
-    "Generate the Python stubs for the Python bindings (only for legacy Boost.Python bindings)"
-    OFF
-    BUILD_PYTHON_INTERFACE
-    OFF
-  )
-endif()
 
 ADD_PROJECT_DEPENDENCY(Eigen3 REQUIRED PKG_CONFIG_REQUIRES "eigen3 >= 3.0.0")
 
@@ -362,31 +341,7 @@ if(COAL_HAS_OCTOMAP)
 endif(COAL_HAS_OCTOMAP)
 
 add_subdirectory(doc)
-if(NOT BUILD_STANDALONE_PYTHON_INTERFACE)
-  add_subdirectory(src)
-endif()
-if(BUILD_PYTHON_INTERFACE)
-  if(BUILD_STANDALONE_PYTHON_INTERFACE)
-    ADD_PROJECT_DEPENDENCY(${PROJECT_NAME} REQUIRED CONFIG)
-  endif()
-  add_custom_target(${PROJECT_NAME}_python)
-  set_target_properties(
-    ${PROJECT_NAME}_python
-    PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD True
-  )
-  if(COAL_PYTHON_NANOBIND)
-    find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
-    # jrl-cmakemodules use PYTHON_EXECUTABLE defined in FINDPYTHON macro.
-    # Since we doesn't call it in this branch, we must redefine it.
-    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
-    add_subdirectory(python-nb)
-  else()
-    set(PYTHON_COMPONENTS Interpreter Development NumPy)
-    FINDPYTHON(REQUIRED)
-    ADD_PROJECT_PRIVATE_DEPENDENCY(eigenpy 2.9.2 REQUIRED)
-    add_subdirectory(python)
-  endif()
-endif()
+add_subdirectory(src)
 if(BUILD_TESTING)
   add_subdirectory(test)
 endif(BUILD_TESTING)
