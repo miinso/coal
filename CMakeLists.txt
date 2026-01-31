@@ -80,6 +80,7 @@ option(
   "Build with tracy profiler for performance analysis"
   FALSE
 )
+option(COAL_WITH_ASSIMP "Enable Assimp mesh importer" OFF)
 
 # Check if the submodule cmake have been initialized
 set(JRL_CMAKE_MODULES "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -128,6 +129,10 @@ include("${JRL_CMAKE_MODULES}/apple.cmake")
 include("${JRL_CMAKE_MODULES}/ide.cmake")
 include("${JRL_CMAKE_MODULES}/tracy.cmake")
 include(CMakeDependentOption)
+
+if(MSVC)
+  add_compile_definitions(BOOST_ALL_NO_LIB)
+endif()
 
 set(
   CMAKE_MODULE_PATH
@@ -215,7 +220,10 @@ if(COAL_HAS_QHULL)
   find_package(Qhull REQUIRED COMPONENTS qhull_r qhullcpp)
 endif()
 
-find_package(assimp REQUIRED)
+set(COAL_HAS_ASSIMP ${COAL_WITH_ASSIMP})
+if(COAL_WITH_ASSIMP)
+  find_package(assimp REQUIRED)
+endif()
 
 set(
   ${PROJECT_NAME}_HEADERS
@@ -300,8 +308,6 @@ set(
   include/coal/hfield.h
   include/coal/fwd.hh
   include/coal/logging.h
-  include/coal/mesh_loader/assimp.h
-  include/coal/mesh_loader/loader.h
   include/coal/internal/BV_fitter.h
   include/coal/internal/BV_splitter.h
   include/coal/internal/shape_shape_func.h
@@ -342,6 +348,14 @@ set(
   include/coal/serialization/triangle.h
   include/coal/timings.h
 )
+
+if(COAL_WITH_ASSIMP)
+  list(
+    APPEND ${PROJECT_NAME}_HEADERS
+    include/coal/mesh_loader/assimp.h
+    include/coal/mesh_loader/loader.h
+  )
+endif()
 
 if(
   COAL_BACKWARD_COMPATIBILITY_WITH_HPP_FCL
@@ -434,8 +448,6 @@ if(
     include/hpp/fcl/math/transform.h
     include/hpp/fcl/math/types.h
     include/hpp/fcl/math/vec_3f.h
-    include/hpp/fcl/mesh_loader/assimp.h
-    include/hpp/fcl/mesh_loader/loader.h
     include/hpp/fcl/narrowphase/gjk.h
     include/hpp/fcl/narrowphase/minkowski_difference.h
     include/hpp/fcl/narrowphase/narrowphase_defaults.h
@@ -478,6 +490,13 @@ if(
     include/hpp/fcl/timings.h
     include/hpp/fcl/warning.hh
   )
+  if(COAL_WITH_ASSIMP)
+    list(
+      APPEND HPP_FCL_BACKWARD_COMPATIBILITY_HEADERS
+      include/hpp/fcl/mesh_loader/assimp.h
+      include/hpp/fcl/mesh_loader/loader.h
+    )
+  endif()
   list(APPEND ${PROJECT_NAME}_HEADERS ${HPP_FCL_BACKWARD_COMPATIBILITY_HEADERS})
   if(NOT BUILD_STANDALONE_PYTHON_INTERFACE)
     HEADER_INSTALL(

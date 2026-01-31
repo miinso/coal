@@ -23,6 +23,16 @@ if(NOT COAL_HAS_OCTOMAP)
     "${DOXYGEN_EXCLUDE} ${PROJECT_SOURCE_DIR}/include/coal/internal/traversal_node_octree.h"
   )
 endif()
+if(NOT COAL_HAS_ASSIMP)
+  set(
+    DOXYGEN_EXCLUDE
+    "${DOXYGEN_EXCLUDE} ${PROJECT_SOURCE_DIR}/include/coal/mesh_loader/assimp.h"
+  )
+  set(
+    DOXYGEN_EXCLUDE
+    "${DOXYGEN_EXCLUDE} ${PROJECT_SOURCE_DIR}/include/coal/mesh_loader/loader.h"
+  )
+endif()
 set(DOXYGEN_EXCLUDE ${DOXYGEN_EXCLUDE} PARENT_SCOPE)
 
 set(DOXYGEN_PREDEFINED "IS_DOXYGEN" PARENT_SCOPE)

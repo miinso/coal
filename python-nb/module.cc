@@ -1,7 +1,9 @@
 /// Copyright 2025 INRIA
 
 #include "coal/config.hh"
+#ifdef COAL_HAS_ASSIMP
 #include "coal/mesh_loader/loader.h"
+#endif
 
 #include "fwd.h"
 
@@ -46,6 +48,7 @@ void exposeVersion(nb::module_& m) {
         "by the input arguments.");
 }
 
+#ifdef COAL_HAS_ASSIMP
 void exposeMeshLoader(nb::module_& m) {
   using namespace coal;
   nb::handle cl_cur = nb::type<MeshLoader>();
@@ -65,6 +68,7 @@ void exposeMeshLoader(nb::module_& m) {
         .def(nb::init<NODE_TYPE>(), "node_type"_a = BV_OBBRSS);
   }
 }
+#endif  // COAL_HAS_ASSIMP
 
 void exposeMaths(nb::module_& m);
 void exposeCollisionGeometries(nb::module_& m);
@@ -87,7 +91,9 @@ NB_MODULE(COAL_PYTHON_LIBNAME, m) {
   exposeContactPatchAPI(m);
   exposeDistanceAPI(m);
   exposeGJK(m);
+#ifdef COAL_HAS_ASSIMP
   exposeMeshLoader(m);
+#endif
 #ifdef COAL_HAS_OCTOMAP
   exposeOctree(m);
 #endif

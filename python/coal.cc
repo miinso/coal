@@ -40,11 +40,13 @@
 #include "coal/shape/geometric_shapes.h"
 #include "coal/BVH/BVH_model.h"
 
+#ifdef COAL_HAS_ASSIMP
 #include "coal/mesh_loader/loader.h"
+#endif
 
 #include "coal/collision.h"
 
-#ifdef COAL_HAS_DOXYGEN_AUTODOC
+#if defined(COAL_HAS_ASSIMP) && defined(COAL_HAS_DOXYGEN_AUTODOC)
 #include "doxygen_autodoc/coal/mesh_loader/loader.h"
 #endif
 
@@ -54,6 +56,7 @@
 using namespace coal;
 namespace dv = doxygen::visitor;
 
+#ifdef COAL_HAS_ASSIMP
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(load_overloads, MeshLoader::load, 1, 2)
@@ -79,9 +82,10 @@ void exposeMeshLoader() {
         "CachedMeshLoader", doxygen::class_doc<MeshLoader>(),
         init<optional<NODE_TYPE> >(
             (arg("self"), arg("node_type")),
-            doxygen::constructor_doc<CachedMeshLoader, const NODE_TYPE&>()));
+            doxygen::constructor_doc<CachedMeshLoader, const NODE_TYPE&>())); 
   }
 }
+#endif  // COAL_HAS_ASSIMP
 
 BOOST_PYTHON_MODULE(coal_pywrap) {
   namespace bp = boost::python;
@@ -93,7 +97,9 @@ BOOST_PYTHON_MODULE(coal_pywrap) {
   exposeMaths();
   exposeCollisionGeometries();
   exposeCollisionObject();
+#ifdef COAL_HAS_ASSIMP
   exposeMeshLoader();
+#endif
   exposeCollisionAPI();
   exposeContactPatchAPI();
   exposeDistanceAPI();

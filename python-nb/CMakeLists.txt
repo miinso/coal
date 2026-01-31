@@ -53,6 +53,10 @@ target_link_libraries(
   ${PYTHON_LIB_NAME_V2}
   PRIVATE ${PROJECT_NAME}::${PROJECT_NAME} Boost::boost
 )
+if(COAL_WITH_ASSIMP)
+  target_link_libraries(${PYTHON_LIB_NAME_V2} PRIVATE coal_assimp)
+  target_compile_definitions(${PYTHON_LIB_NAME_V2} PRIVATE COAL_HAS_ASSIMP)
+endif()
 target_compile_definitions(
   ${PYTHON_LIB_NAME_V2}
   PRIVATE COAL_PYTHON_LIBNAME=${PYTHON_LIB_NAME_V2}

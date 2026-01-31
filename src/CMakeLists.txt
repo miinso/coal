@@ -105,8 +105,6 @@ set(
   BVH/BV_splitter.cpp
   collision_func_matrix.cpp
   collision_utility.cpp
-  mesh_loader/assimp.cpp
-  mesh_loader/loader.cpp
   hfield.cpp
   serialization/serialization.cpp
 )
@@ -169,18 +167,14 @@ target_compile_definitions(${PROJECT_NAME} INTERFACE ${PUBLIC_DEFINITIONS})
 ADD_SOURCE_GROUP(${LIBRARY_NAME}_SOURCES)
 ADD_HEADER_GROUP(PROJECT_HEADERS_FULL_PATH)
 
-MODERNIZE_TARGET_LINK_LIBRARIES(
-  ${LIBRARY_NAME}
-  SCOPE PRIVATE
-  TARGETS assimp::assimp
-  LIBRARIES ${assimp_LIBRARIES}
-  INCLUDE_DIRS ${assimp_INCLUDE_DIR}
-)
-
 target_link_libraries(
   ${LIBRARY_NAME}
   PUBLIC Boost::serialization Boost::filesystem
 )
+
+if(COAL_WITH_ASSIMP)
+  target_compile_definitions(${LIBRARY_NAME} PUBLIC COAL_HAS_ASSIMP)
+endif()
 
 if(COAL_ENABLE_LOGGING)
   target_link_libraries(${LIBRARY_NAME} PUBLIC Boost::log)
@@ -262,6 +256,39 @@ if(octomap_FOUND)
   )
 endif(octomap_FOUND)
 
+if(COAL_WITH_ASSIMP)
+  set(
+    COAL_ASSIMP_SOURCES
+    mesh_loader/assimp.cpp
+    mesh_loader/loader.cpp
+  )
+  add_library(coal_assimp SHARED ${COAL_ASSIMP_SOURCES})
+  add_library(coal::coal_assimp ALIAS coal_assimp)
+  set_standard_output_directory(coal_assimp)
+  target_include_directories(
+    coal_assimp
+    PUBLIC
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  )
+  target_link_libraries(coal_assimp PUBLIC ${LIBRARY_NAME} Boost::filesystem)
+  MODERNIZE_TARGET_LINK_LIBRARIES(
+    coal_assimp
+    SCOPE PUBLIC
+    TARGETS assimp::assimp
+    LIBRARIES ${assimp_LIBRARIES}
+    INCLUDE_DIRS ${assimp_INCLUDE_DIR}
+  )
+  target_compile_definitions(coal_assimp PUBLIC COAL_HAS_ASSIMP)
+  if(SUFFIX_SO_VERSION)
+    set_target_properties(
+      coal_assimp
+      PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR}
+    )
+  endif()
+endif()
+
 install(
   TARGETS ${LIBRARY_NAME}
   EXPORT ${TARGETS_EXPORT_NAME}
@@ -271,3 +298,13 @@ install(
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+if(COAL_WITH_ASSIMP)
+  install(
+    TARGETS coal_assimp
+    EXPORT ${TARGETS_EXPORT_NAME}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
+endif()

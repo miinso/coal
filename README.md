@@ -89,6 +89,18 @@ docker run --rm -it ghcr.io/coal-library/coal:devel
 
 You can find build instruction [here](./development/build.md).
 
+## Optional Assimp addon (MeshLoader)
+
+The MeshLoader API depends on Assimp and is built as a separate
+`coal_assimp` addon.
+
+- Configure with `-DCOAL_WITH_ASSIMP=ON`
+- Link your target against `coal_assimp` (in addition to `coal::coal`)
+- Ensure Assimp runtime libraries are available at runtime
+
+When `COAL_WITH_ASSIMP=OFF` (default), the `coal/mesh_loader/*.h` headers are
+not installed and the `coal.MeshLoader` Python bindings are not exposed.
+
 ## C++ example
 Both the C++ library and the python bindings can be installed as simply as `conda -c conda-forge install coal`.
 The `.so` library, include files and python bindings will then be installed under `$CONDA_PREFIX/lib`, `$CONDA_PREFIX/include` and `$CONDA_PREFIX/lib/python3.XX/site-packages`.

@@ -171,6 +171,10 @@ target_link_libraries(
   ${PYTHON_LIB_NAME}
   PUBLIC ${PROJECT_NAME}::${PROJECT_NAME} eigenpy::eigenpy Boost::boost
 )
+if(COAL_WITH_ASSIMP)
+  target_link_libraries(${PYTHON_LIB_NAME} PUBLIC coal_assimp)
+  target_compile_definitions(${PYTHON_LIB_NAME} PRIVATE COAL_HAS_ASSIMP)
+endif()
 
 set_target_properties(
   ${PYTHON_LIB_NAME}

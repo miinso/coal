@@ -53,7 +53,9 @@ COAL_COMPILER_DIAGNOSTIC_IGNORED_DEPRECECATED_DECLARATIONS
 COAL_COMPILER_DIAGNOSTIC_POP
 
 #include "coal/BV/BV.h"
+#ifdef COAL_HAS_ASSIMP
 #include "coal/mesh_loader/assimp.h"
+#endif
 #include "coal/narrowphase/narrowphase.h"
 #include "coal/shape/geometric_shapes.h"
 
@@ -308,6 +310,7 @@ struct traits<KDOP<N>, Oriented, recursive> : base_traits {
   enum { IS_IMPLEMENTED = false };
 };
 
+#ifdef COAL_HAS_ASSIMP
 COAL_COMPILER_DIAGNOSTIC_PUSH
 COAL_COMPILER_DIAGNOSTIC_IGNORED_DEPRECECATED_DECLARATIONS
 
@@ -696,3 +699,4 @@ BOOST_AUTO_TEST_CASE(mesh_mesh_benchmark) {
   bench_stream = NULL;
   ofs.close();
 }
+#endif  // COAL_HAS_ASSIMP
