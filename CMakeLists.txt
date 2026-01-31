@@ -28,26 +28,39 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cmake_minimum_required(VERSION 3.22)
-set(CXX_DISABLE_WERROR TRUE)
 
 set(PROJECT_NAME coal)
-set(PROJECT_ORG "coal-library")
 set(
   PROJECT_DESCRIPTION
   "Coal, The Collision Detection Library. Previously known as HPP-FCL, fork of FCL -- The Flexible Collision Library"
 )
-set(PROJECT_URL "https://github.com/coal-library/coal")
-set(PROJECT_USE_CMAKE_EXPORT TRUE)
-set(PROJECT_COMPATIBILITY_VERSION AnyNewerVersion)
-# To enable jrl-cmakemodules compatibility with workspace we must define the two
-# following lines
-set(PROJECT_AUTO_RUN_FINALIZE FALSE)
-set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
+set(COAL_VERSION "0.0.0" CACHE STRING "Coal-lite version")
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/.version")
+  file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/.version" COAL_VERSION)
+  string(STRIP "${COAL_VERSION}" COAL_VERSION)
+endif()
+if(COAL_VERSION STREQUAL "")
+  set(COAL_VERSION "0.0.0")
+endif()
 
-set(PROJECT_USE_KEYWORD_LINK_LIBRARIES TRUE)
+project(
+  ${PROJECT_NAME}
+  VERSION ${COAL_VERSION}
+  DESCRIPTION "${PROJECT_DESCRIPTION}"
+  LANGUAGES CXX
+)
+
+set(PROJECT_URL "https://github.com/coal-library/coal")
+set(PROJECT_COMPATIBILITY_VERSION AnyNewerVersion)
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+include(CTest)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 # ----------------------------------------------------
 # --- OPTIONS  ---------------------------------------
-# Need to be set before including base.cmake
 # ----------------------------------------------------
 option(SUFFIX_SO_VERSION "Suffix library name with its version" OFF)
 option(
@@ -72,63 +85,6 @@ option(
 )
 option(COAL_WITH_ASSIMP "Enable Assimp mesh importer" OFF)
 
-# Check if the submodule cmake have been initialized
-set(JRL_CMAKE_MODULES "${CMAKE_CURRENT_LIST_DIR}/cmake")
-if(EXISTS "${JRL_CMAKE_MODULES}/base.cmake")
-  message(STATUS "JRL cmakemodules found in 'cmake/' git submodule")
-else()
-  find_package(jrl-cmakemodules QUIET CONFIG)
-  if(jrl-cmakemodules_FOUND)
-    get_property(
-      JRL_CMAKE_MODULES
-      TARGET jrl-cmakemodules::jrl-cmakemodules
-      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-    )
-    message(STATUS "JRL cmakemodules found on system at ${JRL_CMAKE_MODULES}")
-  else()
-    message(STATUS "JRL cmakemodules not found. Let's fetch it.")
-    include(FetchContent)
-    FetchContent_Declare(
-      "jrl-cmakemodules"
-      GIT_REPOSITORY "https://github.com/jrl-umi3218/jrl-cmakemodules.git"
-    )
-    FetchContent_MakeAvailable("jrl-cmakemodules")
-    FetchContent_GetProperties("jrl-cmakemodules" SOURCE_DIR JRL_CMAKE_MODULES)
-  endif()
-endif()
-
-# Use BoostConfig module distributed by boost library instead of using FindBoost
-# module distributed by CMake. There is one unresolved issue with FindBoost and
-# clang-cl so we deactivate it in this case.
-if(NOT WIN32 OR NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-  if(POLICY CMP0167)
-    cmake_policy(SET CMP0167 NEW)
-    # Set a default value to this policy to avoid issue with find_dependency
-    # macro redefinition with different policy in some modules.
-    set(CMAKE_POLICY_DEFAULT_CMP0167 NEW)
-  endif()
-endif()
-
-include("${JRL_CMAKE_MODULES}/base.cmake")
-COMPUTE_PROJECT_ARGS(PROJECT_ARGS LANGUAGES CXX)
-project(${PROJECT_NAME} ${PROJECT_ARGS})
-
-include("${JRL_CMAKE_MODULES}/boost.cmake")
-include("${JRL_CMAKE_MODULES}/apple.cmake")
-include("${JRL_CMAKE_MODULES}/ide.cmake")
-include("${JRL_CMAKE_MODULES}/tracy.cmake")
-include(CMakeDependentOption)
-
-if(MSVC)
-  add_compile_definitions(BOOST_ALL_NO_LIB)
-endif()
-
-set(
-  CMAKE_MODULE_PATH
-  ${JRL_CMAKE_MODULES}/find-external/assimp/
-  ${CMAKE_MODULE_PATH}
-)
-
 function(set_standard_output_directory target)
   set_target_properties(
     ${target}
@@ -139,17 +95,57 @@ function(set_standard_output_directory target)
   )
 endfunction()
 
-SET_DEFAULT_CMAKE_BUILD_TYPE("RelWithDebInfo")
+if(MSVC)
+  add_compile_definitions(BOOST_ALL_NO_LIB)
+endif()
 
-# If needed, fix CMake policy for APPLE systems
-APPLY_DEFAULT_APPLE_CONFIGURATION()
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(
+    CMAKE_BUILD_TYPE
+    RelWithDebInfo
+    CACHE STRING
+    "Choose the type of build (Debug, Release, RelWithDebInfo, MinSizeRel)."
+    FORCE
+  )
+  set_property(
+    CACHE CMAKE_BUILD_TYPE
+    PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel
+  )
+endif()
 
-ADD_PROJECT_DEPENDENCY(Eigen3 REQUIRED PKG_CONFIG_REQUIRES "eigen3 >= 3.0.0")
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH ON)
+  set(CMAKE_INSTALL_RPATH "@loader_path")
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
+
+set(GENERATED_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include/coal")
+file(MAKE_DIRECTORY "${GENERATED_INCLUDE_DIR}")
+configure_file(
+  "${CMAKE_CURRENT_LIST_DIR}/cmake/coal-config.hh.in"
+  "${GENERATED_INCLUDE_DIR}/config.hh"
+  @ONLY
+)
+configure_file(
+  "${CMAKE_CURRENT_LIST_DIR}/cmake/coal-deprecated.hh.in"
+  "${GENERATED_INCLUDE_DIR}/deprecated.hh"
+  @ONLY
+)
+configure_file(
+  "${CMAKE_CURRENT_LIST_DIR}/cmake/coal-warning.hh.in"
+  "${GENERATED_INCLUDE_DIR}/warning.hh"
+  @ONLY
+)
+
+set(COAL_PKG_CONFIG_REQUIRES "")
+
+find_package(Eigen3 REQUIRED)
+list(APPEND COAL_PKG_CONFIG_REQUIRES "eigen3 >= 3.0.0")
 
 # -- tracy profiling (optional)
 if(COAL_BUILD_WITH_TRACY)
   # assume it is installed somewhere
-  ADD_PROJECT_DEPENDENCY(Tracy REQUIRED)
+  find_package(Tracy REQUIRED)
   set_target_properties(
     Tracy::TracyClient
     PROPERTIES POSITION_INDEPENDENT_CODE True
@@ -157,25 +153,34 @@ if(COAL_BUILD_WITH_TRACY)
 endif(COAL_BUILD_WITH_TRACY)
 
 # Required dependencies
-SET_BOOST_DEFAULT_OPTIONS()
-EXPORT_BOOST_DEFAULT_OPTIONS()
-ADD_PROJECT_DEPENDENCY(Boost REQUIRED serialization filesystem)
+set(Boost_USE_MULTITHREADED ON)
+if(NOT DEFINED Boost_USE_STATIC_LIBS)
+  set(Boost_USE_STATIC_LIBS OFF)
+endif()
+if(NOT DEFINED Boost_NO_BOOST_CMAKE)
+  set(Boost_NO_BOOST_CMAKE ON)
+endif()
+
+find_package(Boost REQUIRED COMPONENTS serialization filesystem)
 if(COAL_ENABLE_LOGGING)
-  ADD_PROJECT_DEPENDENCY(Boost REQUIRED log)
+  find_package(Boost REQUIRED COMPONENTS log)
 endif()
 
 if(Boost_VERSION_STRING VERSION_LESS 1.81)
   # Default C++ version should be C++11
-  CHECK_MINIMAL_CXX_STANDARD(11 ENFORCE)
+  set(CMAKE_CXX_STANDARD 11)
 else()
   # Boost.Math will be C++14 starting in July 2023 (Boost 1.82 release)
-  CHECK_MINIMAL_CXX_STANDARD(14 ENFORCE)
+  set(CMAKE_CXX_STANDARD 14)
 endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Optional dependencies
-ADD_PROJECT_DEPENDENCY(octomap 1.8.0 PKG_CONFIG_REQUIRES "octomap >= 1.8")
+find_package(octomap QUIET)
 if(octomap_FOUND)
   set(COAL_HAS_OCTOMAP TRUE)
+  list(APPEND COAL_PKG_CONFIG_REQUIRES "octomap >= 1.8")
   string(REPLACE "." ";" VERSION_LIST ${octomap_VERSION})
   list(GET VERSION_LIST 0 OCTOMAP_MAJOR_VERSION)
   list(GET VERSION_LIST 1 OCTOMAP_MINOR_VERSION)
@@ -279,6 +284,7 @@ set(
   include/coal/hfield.h
   include/coal/fwd.hh
   include/coal/logging.h
+  include/coal/tracy.hh
   include/coal/internal/BV_fitter.h
   include/coal/internal/BV_splitter.h
   include/coal/internal/shape_shape_func.h
@@ -342,12 +348,89 @@ if(BUILD_TESTING)
   add_subdirectory(test)
 endif(BUILD_TESTING)
 
-PKG_CONFIG_APPEND_LIBS("coal")
+# Install headers
+if(COAL_WITH_ASSIMP)
+  install(
+    DIRECTORY ${PROJECT_SOURCE_DIR}/include/coal
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+      PATTERN "*.h"
+      PATTERN "*.hh"
+      PATTERN "*.hpp"
+      PATTERN "*.hxx"
+  )
+else()
+  install(
+    DIRECTORY ${PROJECT_SOURCE_DIR}/include/coal
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+      PATTERN "*.h"
+      PATTERN "*.hh"
+      PATTERN "*.hpp"
+      PATTERN "*.hxx"
+      PATTERN "mesh_loader/*" EXCLUDE
+  )
+endif()
+install(
+  FILES
+    ${GENERATED_INCLUDE_DIR}/config.hh
+    ${GENERATED_INCLUDE_DIR}/deprecated.hh
+    ${GENERATED_INCLUDE_DIR}/warning.hh
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/coal
+)
+
+# Export targets + Config.cmake
+install(
+  EXPORT ${TARGETS_EXPORT_NAME}
+  NAMESPACE coal::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+export(
+  EXPORT ${TARGETS_EXPORT_NAME}
+  NAMESPACE coal::
+  FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake
+)
+configure_package_config_file(
+  ${CMAKE_CURRENT_LIST_DIR}/cmake/coalConfig.cmake.in
+  ${PROJECT_BINARY_DIR}/coalConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+write_basic_package_version_file(
+  ${PROJECT_BINARY_DIR}/coalConfigVersion.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY ${PROJECT_COMPATIBILITY_VERSION}
+)
+install(
+  FILES
+    ${PROJECT_BINARY_DIR}/coalConfig.cmake
+    ${PROJECT_BINARY_DIR}/coalConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+# pkg-config
 if(COAL_HAS_OCTOMAP)
   # FCL_HAVE_OCTOMAP kept for backward compatibility reasons.
-  PKG_CONFIG_APPEND_CFLAGS(
+  set(
+    COAL_PC_CFLAGS_EXTRA
     "-DCOAL_HAS_OCTOMAP -DCOAL_HAVE_OCTOMAP -DFCL_HAVE_OCTOMAP -DOCTOMAP_MAJOR_VERSION=${OCTOMAP_MAJOR_VERSION} -DOCTOMAP_MINOR_VERSION=${OCTOMAP_MINOR_VERSION} -DOCTOMAP_PATCH_VERSION=${OCTOMAP_PATCH_VERSION}"
   )
-endif(COAL_HAS_OCTOMAP)
-
-SETUP_PROJECT_FINALIZE()
+else()
+  set(COAL_PC_CFLAGS_EXTRA "")
+endif()
+if(COAL_PKG_CONFIG_REQUIRES)
+  string(JOIN ", " COAL_PC_REQUIRES ${COAL_PKG_CONFIG_REQUIRES})
+  set(COAL_PC_REQUIRES_LINE "Requires: ${COAL_PC_REQUIRES}")
+else()
+  set(COAL_PC_REQUIRES_LINE "")
+endif()
+set(COAL_PC_LIBS "-L${CMAKE_INSTALL_FULL_LIBDIR} -lcoal")
+set(COAL_PC_CFLAGS "-I${CMAKE_INSTALL_FULL_INCLUDEDIR} ${COAL_PC_CFLAGS_EXTRA}")
+configure_file(
+  ${CMAKE_CURRENT_LIST_DIR}/cmake/coal.pc.in
+  ${PROJECT_BINARY_DIR}/coal.pc
+  @ONLY
+)
+install(
+  FILES ${PROJECT_BINARY_DIR}/coal.pc
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)

@@ -1,24 +1,32 @@
 # Find Boost.UnitTestFramework
 find_package(Boost REQUIRED COMPONENTS unit_test_framework filesystem)
 
-CONFIG_FILES(fcl_resources/config.h)
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/fcl_resources")
+configure_file(
+  ${CMAKE_CURRENT_LIST_DIR}/fcl_resources/config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/fcl_resources/config.h
+  @ONLY
+)
 
 function(add_coal_test test_name source)
   set(target_name ${PROJECT_NAME}-${test_name})
-  ADD_UNIT_TEST(${target_name} ${source})
+  add_executable(${target_name} ${source})
   set_standard_output_directory(${target_name})
   target_link_libraries(
     ${target_name}
-    PUBLIC ${LIBRARY_NAME} Boost::filesystem ${utility_target}
+    PUBLIC
+      ${LIBRARY_NAME}
+      Boost::filesystem
+      Boost::unit_test_framework
+      ${utility_target}
   )
-  CXX_FLAGS_BY_COMPILER_FRONTEND(
-    GNU "-Wno-c99-extensions"
-    OUTPUT PRIVATE_OPTIONS
-  )
-  target_compile_options(${target_name} PRIVATE ${PRIVATE_OPTIONS})
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(${target_name} PRIVATE -Wno-c99-extensions)
+  endif()
   if(COAL_HAS_QHULL)
     target_compile_definitions(${target_name} PRIVATE COAL_HAS_QHULL)
   endif()
+  add_test(NAME ${target_name} COMMAND ${target_name})
 endfunction()
 
 function(add_coal_assimp_test test_name source)

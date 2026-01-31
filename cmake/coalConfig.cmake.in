@@ -1,0 +1,32 @@
+@PACKAGE_INIT@
+
+set(COAL_VERSION "@PROJECT_VERSION@")
+
+include(CMakeFindDependencyMacro)
+
+if(NOT DEFINED Boost_USE_STATIC_LIBS)
+  set(Boost_USE_STATIC_LIBS @Boost_USE_STATIC_LIBS@)
+endif()
+if(NOT DEFINED Boost_USE_MULTITHREADED)
+  set(Boost_USE_MULTITHREADED @Boost_USE_MULTITHREADED@)
+endif()
+if(NOT DEFINED Boost_NO_BOOST_CMAKE)
+  set(Boost_NO_BOOST_CMAKE @Boost_NO_BOOST_CMAKE@)
+endif()
+
+find_dependency(Eigen3)
+find_dependency(Boost COMPONENTS serialization filesystem)
+if(@COAL_ENABLE_LOGGING@)
+  find_dependency(Boost COMPONENTS log)
+endif()
+if(@COAL_HAS_OCTOMAP@)
+  find_dependency(octomap)
+endif()
+if(@COAL_WITH_ASSIMP@)
+  find_dependency(assimp)
+endif()
+if(@COAL_BUILD_WITH_TRACY@)
+  find_dependency(Tracy)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/coalTargets.cmake")
