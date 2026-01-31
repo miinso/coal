@@ -45,13 +45,10 @@ set(PROJECT_AUTO_RUN_FINALIZE FALSE)
 set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 set(PROJECT_USE_KEYWORD_LINK_LIBRARIES TRUE)
-set(DOXYGEN_USE_TEMPLATE_CSS TRUE)
-
 # ----------------------------------------------------
 # --- OPTIONS  ---------------------------------------
 # Need to be set before including base.cmake
 # ----------------------------------------------------
-option(INSTALL_DOCUMENTATION "Generate and install the documentation" OFF)
 option(SUFFIX_SO_VERSION "Suffix library name with its version" OFF)
 option(
   COAL_TURN_ASSERT_INTO_EXCEPTION
@@ -340,7 +337,6 @@ if(COAL_HAS_OCTOMAP)
   )
 endif(COAL_HAS_OCTOMAP)
 
-add_subdirectory(doc)
 add_subdirectory(src)
 if(BUILD_TESTING)
   add_subdirectory(test)
