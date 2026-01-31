@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      SCCACHE_VERSION: "v0.13.0"
+      CMAKE_C_COMPILER_LAUNCHER: sccache
+      CMAKE_CXX_COMPILER_LAUNCHER: sccache
+      EIGEN_VERSION: "5.0.0"
+      EIGEN3_INCLUDE_DIR: ${{ github.workspace }}/deps/eigen
+      BOOST_VERSION: "1.88.0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Install deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja --no-progress
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+        with:
+          version: ${{ env.SCCACHE_VERSION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure Boost toolset (sccache, Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p "$HOME/bin"
+          cat > "$HOME/bin/sccache-g++" <<'EOF'
+          #!/usr/bin/env bash
+          exec sccache g++ "$@"
+          EOF
+          chmod +x "$HOME/bin/sccache-g++"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          cat > "$HOME/user-config.jam" <<'EOF'
+          using gcc : : sccache-g++ ;
+          EOF
+
+      - name: Configure Boost toolset (sccache, macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p "$HOME/bin"
+          cat > "$HOME/bin/sccache-clang++" <<'EOF'
+          #!/usr/bin/env bash
+          exec sccache clang++ "$@"
+          EOF
+          chmod +x "$HOME/bin/sccache-clang++"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          cat > "$HOME/user-config.jam" <<'EOF'
+          using clang : : sccache-clang++ ;
+          EOF
+
+      - name: MSVC environment (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Cache Boost archive
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.workspace }}/boost_*.tar.gz
+          key: boost-${{ env.BOOST_VERSION }}
+
+      - name: Build Boost
+        id: boost
+        uses: egor-tensin/build-boost@v1
+        with:
+          version: ${{ env.BOOST_VERSION }}
+          libraries: filesystem serialization system test
+          platform: x64
+          configuration: Release
+
+      - name: Export Boost paths
+        shell: bash
+        run: |
+          echo "BOOST_ROOT=${{ steps.boost.outputs.root }}" >> "$GITHUB_ENV"
+          echo "BOOST_LIBRARYDIR=${{ steps.boost.outputs.librarydir }}" >> "$GITHUB_ENV"
+
+      - name: Add Boost DLLs to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:BOOST_LIBRARYDIR | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Install Eigen
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "${EIGEN_VERSION}" https://gitlab.com/libeigen/eigen.git deps/eigen
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=ON
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DBOOST_ROOT="${{ env.BOOST_ROOT }}"
+          -DBOOST_LIBRARYDIR="${{ env.BOOST_LIBRARYDIR }}"
+          -DEIGEN3_INCLUDE_DIR="${{ env.EIGEN3_INCLUDE_DIR }}"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: sccache stats
+        run: sccache --show-stats

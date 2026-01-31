@@ -139,7 +139,10 @@ configure_file(
 
 set(COAL_PKG_CONFIG_REQUIRES "")
 
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 QUIET)
+if(NOT TARGET Eigen3::Eigen AND NOT EIGEN3_INCLUDE_DIR)
+  message(FATAL_ERROR "Eigen3 not found. Set Eigen3_DIR or EIGEN3_INCLUDE_DIR.")
+endif()
 list(APPEND COAL_PKG_CONFIG_REQUIRES "eigen3 >= 3.0.0")
 
 # -- tracy profiling (optional)

@@ -208,7 +208,10 @@ endif()
 if(TARGET Eigen3::Eigen)
   target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
 elseif(EIGEN3_INCLUDE_DIR)
-  target_include_directories(${PROJECT_NAME} PUBLIC ${EIGEN3_INCLUDE_DIR})
+  target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}>
+  )
 endif()
 
 target_include_directories(
