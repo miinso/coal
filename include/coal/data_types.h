@@ -82,20 +82,6 @@ typedef Eigen::Vector2i support_func_guess_t;
 typedef double SolverScalar;
 typedef Eigen::Matrix<SolverScalar, 3, 1> Vec3ps;
 
-#ifdef COAL_BACKWARD_COMPATIBILITY_WITH_HPP_FCL
-// We keep the FCL_REAL typedef and the Vec[..]f typedefs for backward
-// compatibility.
-typedef Scalar FCL_REAL;
-typedef Vec3s Vec3f;
-typedef Vec2s Vec2f;
-typedef Vec6s Vec6f;
-typedef VecXs VecXf;
-typedef Matrix3s Matrix3f;
-typedef MatrixX3s Matrixx3f;
-typedef MatrixX2s Matrixx2f;
-typedef MatrixXs MatrixXf;
-#endif
-
 /// @brief Initial guess to use for the GJK algorithm
 /// DefaultGuess: Vec3s(1, 0, 0)
 /// CachedGuess: previous vector found by GJK or guess cached by the user

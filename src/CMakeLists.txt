@@ -138,11 +138,6 @@ add_library(
 add_library(${LIBRARY_NAME}::${LIBRARY_NAME} ALIAS ${LIBRARY_NAME})
 set_standard_output_directory(${LIBRARY_NAME})
 
-if(COAL_BACKWARD_COMPATIBILITY_WITH_HPP_FCL)
-  add_library(hpp-fcl ALIAS ${LIBRARY_NAME})
-  add_library(hpp-fcl::hpp-fcl ALIAS ${LIBRARY_NAME})
-endif()
-
 if(UNIX)
   GET_RELATIVE_RPATH(${CMAKE_INSTALL_LIBDIR} ${PROJECT_NAME}_INSTALL_RPATH)
   set_target_properties(
@@ -207,13 +202,6 @@ if(COAL_TURN_ASSERT_INTO_EXCEPTION)
   target_compile_definitions(
     ${LIBRARY_NAME}
     PUBLIC COAL_TURN_ASSERT_INTO_EXCEPTION
-  )
-endif()
-
-if(COAL_BACKWARD_COMPATIBILITY_WITH_HPP_FCL)
-  target_compile_definitions(
-    ${LIBRARY_NAME}
-    PUBLIC COAL_BACKWARD_COMPATIBILITY_WITH_HPP_FCL
   )
 endif()
 
